@@ -1,0 +1,895 @@
+<!DOCTYPE html>  
+<html lang="pt-BR">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Modelo Orçamentário Integrado</title>  
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>  
+    <style>  
+        * { margin: 0; padding: 0; box-sizing: border-box; }  
+        body {  
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;  
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  
+            padding: 20px;  
+            min-height: 100vh;  
+        }  
+        .container {  
+            max-width: 1400px;  
+            margin: 0 auto;  
+            background: white;  
+            border-radius: 12px;  
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);  
+            padding: 30px;  
+        }  
+        h1 { color: #333; margin-bottom: 10px; text-align: center; }  
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }  
+        .sector-selection {  
+            background: #f0f4ff;  
+            border: 2px solid #667eea;  
+            border-radius: 8px;  
+            padding: 20px;  
+            margin-bottom: 30px;  
+            display: flex;  
+            gap: 20px;  
+            flex-wrap: wrap;  
+            align-items: center;  
+        }  
+        .sector-selection label {  
+            display: flex;  
+            align-items: center;  
+            gap: 8px;  
+            cursor: pointer;  
+            font-weight: 500;  
+            margin: 0;  
+        }  
+        .sector-selection input { width: auto; cursor: pointer; }  
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #eee; flex-wrap: wrap; }  
+        .tab-btn {  
+            padding: 12px 20px;  
+            background: none;  
+            border: none;  
+            cursor: pointer;  
+            font-size: 16px;  
+            color: #666;  
+            border-bottom: 3px solid transparent;  
+            transition: all 0.3s;  
+            font-weight: 500;  
+        }  
+        .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }  
+        .tab-btn:hover { color: #667eea; }  
+        .tab-content { display: none; }  
+        .tab-content.active { display: block; }  
+        .form-group { margin-bottom: 20px; }  
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }  
+        input, select, textarea {  
+            width: 100%;  
+            padding: 10px;  
+            border: 1px solid #ddd;  
+            border-radius: 6px;  
+            font-size: 14px;  
+            font-family: inherit;  
+        }  
+        input:focus, select:focus, textarea:focus {  
+            outline: none;  
+            border-color: #667eea;  
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);  
+        }  
+        table {  
+            width: 100%;  
+            border-collapse: collapse;  
+            margin: 20px 0;  
+            font-size: 14px;  
+        }  
+        th {  
+            background: #f5f5f5;  
+            padding: 12px;  
+            text-align: left;  
+            color: #333;  
+            font-weight: 600;  
+            border-bottom: 2px solid #ddd;  
+        }  
+        td { padding: 12px; border-bottom: 1px solid #eee; }  
+        tr:hover { background: #f9f9f9; }  
+        .currency { text-align: right; font-family: 'Courier New', monospace; }  
+        .total-row { background: #f5f5f5; font-weight: 600; border-top: 2px solid #ddd; }  
+        .total-row.highlight { background: #e3f2fd; color: #1976d2; }  
+        .btn-group { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }  
+        button {  
+            padding: 12px 24px;  
+            background: #667eea;  
+            color: white;  
+            border: none;  
+            border-radius: 6px;  
+            cursor: pointer;  
+            font-size: 14px;  
+            font-weight: 500;  
+            transition: all 0.3s;  
+        }  
+        button:hover {  
+            background: #5568d3;  
+            transform: translateY(-2px);  
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);  
+        }  
+        button.secondary { background: #999; }  
+        button.secondary:hover { background: #777; }  
+        button.danger { background: #f44336; }  
+        button.danger:hover { background: #da190b; }  
+        .info-box {  
+            background: #e3f2fd;  
+            border-left: 4px solid #1976d2;  
+            padding: 15px;  
+            margin: 20px 0;  
+            border-radius: 4px;  
+            color: #1565c0;  
+            font-size: 14px;  
+        }  
+        .scenario-cards {  
+            display: grid;  
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));  
+            gap: 20px;  
+            margin: 20px 0;  
+        }  
+        .scenario-card {  
+            border: 2px solid #eee;  
+            border-radius: 8px;  
+            padding: 20px;  
+            transition: all 0.3s;  
+        }  
+        .scenario-card:hover { border-color: #667eea; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2); }  
+        .scenario-card h3 { margin-bottom: 15px; color: #333; }  
+        .scenario-card.pessimista { border-color: #f44336; }  
+        .scenario-card.pessimista h3 { color: #f44336; }  
+        .scenario-card.realista { border-color: #4caf50; }  
+        .scenario-card.realista h3 { color: #4caf50; }  
+        .scenario-card.otimista { border-color: #2196f3; }  
+        .scenario-card.otimista h3 { color: #2196f3; }  
+        .chart-container { position: relative; height: 400px; margin: 30px 0; }  
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }  
+        .delete-btn { background: #f44336; padding: 6px 12px; font-size: 12px; width: 100%; margin-top: 5px; }  
+        .delete-btn:hover { background: #da190b; }  
+        @media (max-width: 768px) {  
+            .grid-2 { grid-template-columns: 1fr; }  
+            table { font-size: 12px; }  
+            td, th { padding: 8px; }  
+            .btn-group { flex-direction: column; }  
+            button { width: 100%; }  
+            .sector-selection { flex-direction: column; align-items: flex-start; }  
+        }  
+        @media print {  
+            body { background: white; padding: 0; }  
+            .container { box-shadow: none; max-width: 100%; }  
+            .tabs { display: none; }  
+            .btn-group { display: none; }  
+            button { display: none; }  
+            .sector-selection { display: none; }  
+        }  
+    </style>  
+</head>  
+<body>  
+    <div class="container" id="conteudoParaPDF">  
+        <h1>📊 Modelo Orçamentário Integrado</h1>  
+        <p class="subtitle">Sistema para trabalhar com Base Zero, Flexível, Contínuo e Cenários</p>  
+
+        <!-- SELEÇÃO DE SETOR -->  
+        <div class="sector-selection">  
+            <span style="font-weight: bold; color: #667eea;">Selecione o Setor da Empresa:</span>  
+            <label><input type="radio" name="setor" value="comercio" checked onchange="atualizarSetor()"> 🏪 Comércio</label>  
+            <label><input type="radio" name="setor" value="industria" onchange="atualizarSetor()"> 🏭 Indústria</label>  
+            <label><input type="radio" name="setor" value="ambos" onchange="atualizarSetor()"> 🔄 Comércio + Indústria</label>  
+        </div>  
+
+        <div class="btn-group">  
+            <button onclick="exportarPDF()">📄 Exportar para PDF</button>  
+            <button class="secondary" onclick="window.print()">🖨️ Imprimir</button>  
+        </div>  
+
+        <div class="tabs">  
+            <button class="tab-btn active" onclick="switchTab(0)">Entrada de Dados</button>  
+            <button class="tab-btn" onclick="switchTab(1)">Base Zero</button>  
+            <button class="tab-btn" onclick="switchTab(2)">Orçamento Flexível</button>  
+            <button class="tab-btn" onclick="switchTab(3)">Orçamento Contínuo</button>  
+            <button class="tab-btn" onclick="switchTab(4)">Cenários</button>  
+            <button class="tab-btn" onclick="switchTab(5)">Análise Comparativa</button>  
+        </div>  
+
+        <!-- TAB 1: ENTRADA DE DADOS -->  
+        <div class="tab-content active" id="tab0">  
+            <h2>Entrada de Dados da Empresa</h2>  
+            <div class="grid-2">  
+                <div class="form-group">  
+                    <label for="empresa">Nome da Empresa</label>  
+                    <input type="text" id="empresa" placeholder="Ex: Tech Solutions Ltda">  
+                </div>  
+                <div class="form-group">  
+                    <label for="periodo">Período de Orçamento</label>  
+                    <input type="text" id="periodo" placeholder="Ex: Janeiro a Dezembro 2026">  
+                </div>  
+            </div>  
+
+            <h3 style="margin: 30px 0 20px 0;">Variáveis de Controle (Drivers)</h3>  
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Variável</th>  
+                        <th>Valor</th>  
+                        <th>Descrição</th>  
+                    </tr>  
+                </thead>  
+                <tbody>  
+                    <tr>  
+                        <td>Volume de Vendas Mensal (unidades)</td>  
+                        <td><input type="number" id="volumeVendas" value="1000" style="width: 100%;"></td>  
+                        <td>Quantidade estimada</td>  
+                    </tr>  
+                    <tr>  
+                        <td>Preço Médio Unitário</td>  
+                        <td><input type="number" id="precoUnitario" value="100" style="width: 100%;" step="0.01"></td>  
+                        <td>R$ por unidade</td>  
+                    </tr>  
+                    <tr>  
+                        <td>Variação Inflacionária Mensal (%)</td>  
+                        <td><input type="number" id="inflacao" value="0.5" style="width: 100%;" step="0.1"></td>  
+                        <td>Aumento de custos</td>  
+                    </tr>  
+                    <tr>  
+                        <td>Impostos sobre Vendas (%)</td>  
+                        <td><input type="number" id="impostos" value="18" style="width: 100%;" step="0.1"></td>  
+                        <td>% da receita bruta</td>  
+                    </tr>  
+                </tbody>  
+            </table>  
+
+            <h3 style="margin: 30px 0 20px 0;">Variáveis Customizadas</h3>  
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Descrição</th>  
+                        <th>Valor</th>  
+                        <th>Ação</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="variaveisCustomizadas">  
+                </tbody>  
+            </table>  
+
+            <div class="btn-group">  
+                <button onclick="adicionarVariavel()">+ Adicionar Variável</button>  
+                <button class="secondary" onclick="salvarDados()">Salvar Dados de Entrada</button>  
+            </div>  
+        </div>  
+
+        <!-- TAB 2: BASE ZERO -->  
+        <div class="tab-content" id="tab1">  
+            <h2>Orçamento Base Zero</h2>  
+            <div class="info-box">  
+                <strong>Conceito:</strong> Todas as despesas devem ser justificadas do zero, sem partir de gastos anteriores. Cada item é questionado quanto à sua necessidade.  
+            </div>  
+
+            <h3 style="margin: 30px 0 20px 0;">Categorias de Despesas - Justificação Requerida</h3>  
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Categoria</th>  
+                        <th>Despesa Mensal (R$)</th>  
+                        <th>Justificativa</th>  
+                        <th>Essencial?</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="baseZeroTable">  
+                </tbody>  
+            </table>  
+
+            <div class="btn-group">  
+                <button onclick="adicionarCategoriaBaseZero()">+ Adicionar Categoria</button>  
+                <button class="secondary" onclick="calcularBaseZero()">Calcular Total</button>  
+            </div>  
+
+            <table style="margin-top: 30px;">  
+                <tr class="total-row highlight">  
+                    <td>TOTAL MENSAL (Base Zero)</td>  
+                    <td class="currency" id="totalBaseZero">R$ 0,00</td>  
+                </tr>  
+                <tr class="total-row highlight">  
+                    <td>TOTAL ANUAL (Base Zero)</td>  
+                    <td class="currency" id="totalBaseZeroAnual">R$ 0,00</td>  
+                </tr>  
+            </table>  
+        </div>  
+
+        <!-- TAB 3: ORÇAMENTO FLEXÍVEL -->  
+        <div class="tab-content" id="tab2">  
+            <h2>Orçamento Flexível</h2>  
+            <div class="info-box">  
+                <strong>Conceito:</strong> Despesas se ajustam automaticamente conforme o volume de vendas muda. Diferencia despesas fixas e variáveis.  
+            </div>  
+
+            <h3 style="margin: 30px 0 20px 0;">Estrutura de Despesas (Fixas vs Variáveis)</h3>  
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Tipo de Despesa</th>  
+                        <th>Valor Mensal</th>  
+                        <th>% Variável</th>  
+                        <th>Fórmula</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="flexivelTable">  
+                </tbody>  
+            </table>  
+
+            <button onclick="adicionarCategoriaFlexivel()">+ Adicionar Despesa</button>  
+
+            <h3 style="margin: 30px 0 20px 0;">Simulação por Volume</h3>  
+            <div class="grid-2">  
+                <div class="form-group">  
+                    <label>Volume Pessimista (unidades)</label>  
+                    <input type="number" id="volumePessimista" value="800">  
+                </div>  
+                <div class="form-group">  
+                    <label>Volume Otimista (unidades)</label>  
+                    <input type="number" id="volumeOtimista" value="1200">  
+                </div>  
+            </div>  
+
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Cenário</th>  
+                        <th>Volume</th>  
+                        <th>Receita</th>  
+                        <th>Custos Variáveis</th>  
+                        <th>Custos Fixos</th>  
+                        <th>Resultado</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="flexivelSimulacao">  
+                </tbody>  
+            </table>  
+
+            <button onclick="calcularFlexivel()">Simular Cenários Flexíveis</button>  
+        </div>  
+
+        <!-- TAB 4: ORÇAMENTO CONTÍNUO -->  
+        <div class="tab-content" id="tab3">  
+            <h2>Orçamento Contínuo (Rolling Budget)</h2>  
+            <div class="info-box">  
+                <strong>Conceito:</strong> Projeção 12 meses sempre renovada. Conforme passa um mês, adiciona-se um novo mês no horizonte, mantendo sempre 12 meses de visibilidade.  
+            </div>  
+
+            <h3 style="margin: 30px 0 20px 0;">Projeção Mensal - 12 Meses</h3>  
+            <div class="form-group">  
+                <label>Mês Inicial</label>  
+                <select id="mesInicial">  
+                    <option>Janeiro</option>  
+                    <option>Fevereiro</option>  
+                    <option>Março</option>  
+                    <option>Abril</option>  
+                    <option>Maio</option>  
+                    <option>Junho</option>  
+                    <option>Julho</option>  
+                    <option>Agosto</option>  
+                    <option>Setembro</option>  
+                    <option>Outubro</option>  
+                    <option>Novembro</option>  
+                    <option>Dezembro</option>  
+                </select>  
+            </div>  
+
+            <table style="font-size: 12px;">  
+                <thead>  
+                    <tr>  
+                        <th>Mês</th>  
+                        <th>Receita (R$)</th>  
+                        <th>Custos (R$)</th>  
+                        <th>Margem (%)</th>  
+                        <th>Fluxo Acumulado (R$)</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="contiguoTable">  
+                </tbody>  
+            </table>  
+
+            <button onclick="gerarOrçamentoContínuo()">Gerar Projeção</button>  
+        </div>  
+
+        <!-- TAB 5: CENÁRIOS -->  
+        <div class="tab-content" id="tab4">  
+            <h2>Análise de Cenários</h2>  
+            <div class="info-box">  
+                <strong>Conceito:</strong> Comparação entre cenários Pessimista, Realista e Otimista para avaliar risco e potencial.  
+            </div>  
+
+            <div class="scenario-cards">  
+                <div class="scenario-card pessimista">  
+                    <h3>📉 Cenário Pessimista</h3>  
+                    <div class="form-group">  
+                        <label>Variação de Vendas (%)</label>  
+                        <input type="number" id="pessimista_vendas" value="-20" placeholder="-20">  
+                    </div>  
+                    <div class="form-group">  
+                        <label>Aumento de Custos (%)</label>  
+                        <input type="number" id="pessimista_custos" value="15" placeholder="15">  
+                    </div>  
+                </div>  
+
+                <div class="scenario-card realista">  
+                    <h3>➡️ Cenário Realista</h3>  
+                    <div class="form-group">  
+                        <label>Variação de Vendas (%)</label>  
+                        <input type="number" id="realista_vendas" value="0" placeholder="0">  
+                    </div>  
+                    <div class="form-group">  
+                        <label>Aumento de Custos (%)</label>  
+                        <input type="number" id="realista_custos" value="5" placeholder="5">  
+                    </div>  
+                </div>  
+
+                <div class="scenario-card otimista">  
+                    <h3>📈 Cenário Otimista</h3>  
+                    <div class="form-group">  
+                        <label>Variação de Vendas (%)</label>  
+                        <input type="number" id="otimista_vendas" value="30" placeholder="30">  
+                    </div>  
+                    <div class="form-group">  
+                        <label>Aumento de Custos (%)</label>  
+                        <input type="number" id="otimista_custos" value="3" placeholder="3">  
+                    </div>  
+                </div>  
+            </div>  
+
+            <button onclick="calcularCenarios()">Calcular Cenários</button>  
+
+            <table style="margin-top: 30px;">  
+                <thead>  
+                    <tr>  
+                        <th>Métrica</th>  
+                        <th class="currency">Pessimista</th>  
+                        <th class="currency">Realista</th>  
+                        <th class="currency">Otimista</th>  
+                    </tr>  
+                </thead>  
+                <tbody id="cenarioResultados">  
+                </tbody>  
+            </table>  
+
+            <div class="chart-container">  
+                <canvas id="scenarioChart"></canvas>  
+            </div>  
+        </div>  
+
+        <!-- TAB 6: ANÁLISE COMPARATIVA -->  
+        <div class="tab-content" id="tab5">  
+            <h2>Análise Comparativa - Todos os Tipos</h2>  
+            <div class="info-box">  
+                <strong>Resumo:</strong> Comparação entre os diferentes tipos de orçamento para identificar abordagens mais adequadas.  
+            </div>  
+
+            <table>  
+                <thead>  
+                    <tr>  
+                        <th>Tipo de Orçamento</th>  
+                        <th>Melhor Para</th>  
+                        <th>Total Anual</th>  
+                        <th>Vantagens</th>  
+                    </tr>  
+                </thead>  
+                <tbody>  
+                    <tr>  
+                        <td><strong>Base Zero</strong></td>  
+                        <td>Corte de custos, redefinição</td>  
+                        <td id="comp_baseZero" class="currency">R$ 0,00</td>  
+                        <td>Justifica cada despesa, elimina custos desnecessários</td>  
+                    </tr>  
+                    <tr>  
+                        <td><strong>Flexível</strong></td>  
+                        <td>Variação de volume, adaptação</td>  
+                        <td id="comp_flexivel" class="currency">R$ 0,00</td>  
+                        <td>Ajusta-se automaticamente, realista</td>  
+                    </tr>  
+                    <tr>  
+                        <td><strong>Contínuo</strong></td>  
+                        <td>Planejamento de longo prazo</td>  
+                        <td id="comp_continuo" class="currency">R$ 0,00</td>  
+                        <td>Sempre 12 meses de visibilidade</td>  
+                    </tr>  
+                    <tr>  
+                        <td><strong>Cenários</strong></td>  
+                        <td>Gestão de risco, contingência</td>  
+                        <td id="comp_cenarios" class="currency">R$ 0,00</td>  
+                        <td>Prepara para múltiplas realidades</td>  
+                    </tr>  
+                </tbody>  
+            </table>  
+
+            <div class="chart-container" style="margin-top: 40px;">  
+                <canvas id="comparativoChart"></canvas>  
+            </div>  
+        </div>  
+    </div>  
+
+    <script>  
+        // Dados em memória  
+        let dadosGlobais = {  
+            empresa: '',  
+            periodo: '',  
+            volumeVendas: 1000,  
+            precoUnitario: 100,  
+            inflacao: 0.5,  
+            impostos: 18,  
+            baseZero: [],  
+            flexivel: [],  
+            cenarios: {},  
+            variaveisCustomizadas: [],  
+            setor: 'comercio'  
+        };  
+
+        // Categorias padrão por setor - Base Zero  
+        const categoriasBaseZeroPorSetor = {  
+            comercio: [  
+                { nome: 'Salários', valor: 5000, justificativa: '', essencial: true },  
+                { nome: 'Aluguel Loja', valor: 2000, justificativa: '', essencial: true },  
+                { nome: 'Energia', valor: 800, justificativa: '', essencial: true },  
+                { nome: 'Comunicação', valor: 500, justificativa: '', essencial: true },  
+                { nome: 'Logística', valor: 600, justificativa: '', essencial: false }  
+            ],  
+            industria: [  
+                { nome: 'Salários', valor: 8000, justificativa: '', essencial: true },  
+                { nome: 'Aluguel Fábrica', valor: 4000, justificativa: '', essencial: true },  
+                { nome: 'Energia Industrial', valor: 2500, justificativa: '', essencial: true },  
+                { nome: 'Manutenção Equipamentos', valor: 1500, justificativa: '', essencial: true },  
+                { nome: 'Comunicação', valor: 500, justificativa: '', essencial: false }  
+            ],  
+            ambos: [  
+                { nome: 'Salários Loja', valor: 5000, justificativa: '', essencial: true },  
+                { nome: 'Salários Fábrica', valor: 8000, justificativa: '', essencial: true },  
+                { nome: 'Aluguel Loja', valor: 2000, justificativa: '', essencial: true },  
+                { nome: 'Aluguel Fábrica', valor: 4000, justificativa: '', essencial: true },  
+                { nome: 'Energia', valor: 3300, justificativa: '', essencial: true },  
+                { nome: 'Manutenção Equipamentos', valor: 1500, justificativa: '', essencial: true },  
+                { nome: 'Logística', valor: 600, justificativa: '', essencial: false }  
+            ]  
+        };  
+
+        // Categorias padrão por setor - Flexível  
+        const categoriasFlexivelPorSetor = {  
+            comercio: [  
+                { nome: 'Estoque', fixo: 2000, variavel: 15 },  
+                { nome: 'Embalagem', fixo: 500, variavel: 5 },  
+                { nome: 'Salários', fixo: 5000, variavel: 0 },  
+                { nome: 'Aluguel', fixo: 2000, variavel: 0 }  
+            ],  
+            industria: [  
+                { nome: 'Matéria-prima', fixo: 3000, variavel: 25 },  
+                { nome: 'Embalagem', fixo: 1000, variavel: 8 },  
+                { nome: 'Salários', fixo: 8000, variavel: 0 },  
+                { nome: 'Aluguel', fixo: 4000, variavel: 0 },  
+                { nome: 'Manutenção', fixo: 1500, variavel: 2 }  
+            ],  
+            ambos: [  
+                { nome: 'Matéria-prima Fábrica', fixo: 3000, variavel: 25 },  
+                { nome: 'Estoque Loja', fixo: 2000, variavel: 15 },  
+                { nome: 'Embalagem', fixo: 1500, variavel: 10 },  
+                { nome: 'Salários', fixo: 13000, variavel: 0 },  
+                { nome: 'Aluguel', fixo: 6000, variavel: 0 },  
+                { nome: 'Manutenção', fixo: 1500, variavel: 2 }  
+            ]  
+        };  
+
+        function atualizarSetor() {  
+            const setor = document.querySelector('input[name="setor"]:checked').value;  
+            dadosGlobais.setor = setor;  
+            
+            // Atualizar tabela Base Zero  
+            const baseZeroTable = document.getElementById('baseZeroTable');  
+            baseZeroTable.innerHTML = '';  
+            const categoriasBaseZero = categoriasBaseZeroPorSetor[setor];  
+            categoriasBaseZero.forEach(cat => {  
+                const row = document.createElement('tr');  
+                row.innerHTML = `  
+                    <td><input type="text" class="bz-nome" value="${cat.nome}" style="width: 100%;"></td>  
+                    <td><input type="number" step="0.01" class="bz-valor" value="${cat.valor}" style="width: 100%;"></td>  
+                    <td><input type="text" placeholder="Justificativa" class="bz-justif" style="width: 100%;"></td>  
+                    <td><select class="bz-essencial" style="width: 100%;"><option value="Sim" ${cat.essencial ? 'selected' : ''}>Sim</option><option value="Não" ${!cat.essencial ? 'selected' : ''}>Não</option></select></td>  
+                `;  
+                baseZeroTable.appendChild(row);  
+            });  
+
+            // Atualizar tabela Flexível  
+            const flexivelTable = document.getElementById('flexivelTable');  
+            flexivelTable.innerHTML = '';  
+            const categoriasFlexivel = categoriasFlexivelPorSetor[setor];  
+            categoriasFlexivel.forEach(cat => {  
+                const row = document.createElement('tr');  
+                row.innerHTML = `  
+                    <td><input type="text" class="flex-nome" value="${cat.nome}" style="width: 100%;"></td>  
+                    <td><input type="number" step="0.01" class="flex-fixo" value="${cat.fixo}" style="width: 100%;"></td>  
+                    <td><input type="number" step="0.01" class="flex-variavel" value="${cat.variavel}" style="width: 100%;"></td>  
+                    <td><span class="flex-formula">${(cat.fixo + cat.variavel).toFixed(2)}</span></td>  
+                `;  
+                flexivelTable.appendChild(row);  
+            });  
+        }  
+
+        function switchTab(index) {  
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));  
+            document.querySelectorAll('.tab-btn').forEach(el => el.
+document.querySelectorAll('.tab-btn')[index].classList.add('active');
+        }
+
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+
+        // EXPORTAR PARA PDF
+        function exportarPDF() {
+            const element = document.getElementById('conteudoParaPDF');
+            const opt = {
+                margin: 10,
+                filename: `Orcamento_${document.getElementById('empresa').value || 'Educacional'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // ENTRADA DE DADOS
+        function adicionarVariavel() {
+            const tbody = document.getElementById('variaveisCustomizadas');
+            const row = document.createElement('tr');
+            const id = Date.now();
+            row.id = 'var_' + id;
+            row.innerHTML = `
+                <td><input type="text" placeholder="Descrição" class="var-desc" style="width: 100%;"></td>
+                <td><input type="number" placeholder="Valor" class="var-valor" style="width: 100%;" step="0.01"></td>
+                <td><button class="delete-btn" onclick="deletarVariavel(${id})">Deletar</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        function deletarVariavel(id) {
+            document.getElementById('var_' + id).remove();
+        }
+
+        function salvarDados() {
+            dadosGlobais.empresa = document.getElementById('empresa').value || 'Empresa Exemplo';
+            dadosGlobais.periodo = document.getElementById('periodo').value || '2026';
+            dadosGlobais.volumeVendas = parseFloat(document.getElementById('volumeVendas').value);
+            dadosGlobais.precoUnitario = parseFloat(document.getElementById('precoUnitario').value);
+            dadosGlobais.inflacao = parseFloat(document.getElementById('inflacao').value) / 100;
+            dadosGlobais.impostos = parseFloat(document.getElementById('impostos').value) / 100;
+            
+            dadosGlobais.variaveisCustomizadas = [];
+            document.querySelectorAll('#variaveisCustomizadas tr').forEach(row => {
+                const desc = row.querySelector('.var-desc')?.value;
+                const valor = parseFloat(row.querySelector('.var-valor')?.value);
+                if (desc && valor) {
+                    dadosGlobais.variaveisCustomizadas.push({ desc, valor });
+                }
+            });
+            
+            alert('Dados salvos com sucesso!');
+        }
+
+        // BASE ZERO
+        function adicionarCategoriaBaseZero() {
+            const table = document.getElementById('baseZeroTable');
+            const id = Date.now();
+            const row = document.createElement('tr');
+            row.id = 'bz_' + id;
+            row.innerHTML = `
+                <td><input type="text" placeholder="Nova categoria" class="bz-nome" style="width: 100%;"></td>
+                <td><input type="number" step="0.01" class="bz-valor" style="width: 100%;"></td>
+                <td><input type="text" placeholder="Por quê?" class="bz-justif" style="width: 100%;"></td>
+                <td><select class="bz-essencial" style="width: 100%;"><option value="Sim">Sim</option><option value="Não">Não</option></select></td>
+            `;
+            table.appendChild(row);
+        }
+
+        function calcularBaseZero() {
+            const rows = document.querySelectorAll('#baseZeroTable tr');
+            let total = 0;
+            dadosGlobais.baseZero = [];
+            rows.forEach(row => {
+                const nome = row.querySelector('.bz-nome')?.value;
+                const valor = parseFloat(row.querySelector('.bz-valor')?.value) || 0;
+                if (nome) {
+                    total += valor;
+                    dadosGlobais.baseZero.push({ nome, valor });
+                }
+            });
+            document.getElementById('totalBaseZero').textContent = formatarMoeda(total);
+            document.getElementById('totalBaseZeroAnual').textContent = formatarMoeda(total * 12);
+            document.getElementById('comp_baseZero').textContent = formatarMoeda(total * 12);
+        }
+
+        // ORÇAMENTO FLEXÍVEL
+        function adicionarCategoriaFlexivel() {
+            const table = document.getElementById('flexivelTable');
+            const id = Date.now();
+            const row = document.createElement('tr');
+            row.id = 'flex_' + id;
+            row.innerHTML = `
+                <td><input type="text" placeholder="Tipo despesa" class="flex-nome" style="width: 100%;"></td>
+                <td><input type="number" step="0.01" class="flex-fixo" placeholder="Valor fixo" style="width: 100%;"></td>
+                <td><input type="number" step="0.01" class="flex-variavel" placeholder="% ou valor/unidade" style="width: 100%;"></td>
+                <td><span class="flex-formula">Total</span></td>
+            `;
+            table.appendChild(row);
+        }
+
+        function calcularFlexivel() {
+            const rows = document.querySelectorAll('#flexivelTable tr');
+            dadosGlobais.flexivel = [];
+            rows.forEach(row => {
+                const nome = row.querySelector('.flex-nome')?.value;
+                const fixo = parseFloat(row.querySelector('.flex-fixo')?.value) || 0;
+                const variavel = parseFloat(row.querySelector('.flex-variavel')?.value) || 0;
+                if (nome) {
+                    dadosGlobais.flexivel.push({ nome, fixo, variavel });
+                }
+            });
+
+            const volumePessimista = parseFloat(document.getElementById('volumePessimista').value);
+            const volumeOtimista = parseFloat(document.getElementById('volumeOtimista').value);
+            const volumeRealista = dadosGlobais.volumeVendas;
+
+            const tbody = document.getElementById('flexivelSimulacao');
+            tbody.innerHTML = '';
+
+            [
+                { cenario: 'Pessimista', volume: volumePessimista },
+                { cenario: 'Realista', volume: volumeRealista },
+                { cenario: 'Otimista', volume: volumeOtimista }
+            ].forEach(({ cenario, volume }) => {
+                const receita = volume * dadosGlobais.precoUnitario;
+                let custosVariaveis = 0;
+                let custosFixos = 0;
+                
+                dadosGlobais.flexivel.forEach(cat => {
+                    custosFixos += cat.fixo;
+                    custosVariaveis += cat.variavel * volume;
+                });
+
+                const totalCustos = custosFixos + custosVariaveis;
+                const resultado = receita - totalCustos;
+
+                const row = document.createElement('tr');
+                row.classList.add(resultado >= 0 ? '' : 'total-row');
+                row.innerHTML = `
+                    <td>${cenario}</td>
+                    <td class="currency">${volume}</td>
+                    <td class="currency">${formatarMoeda(receita)}</td>
+                    <td class="currency">${formatarMoeda(custosVariaveis)}</td>
+                    <td class="currency">${formatarMoeda(custosFixos)}</td>
+                    <td class="currency" style="color: ${resultado >= 0 ? 'green' : 'red'};"><strong>${formatarMoeda(resultado)}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('comp_flexivel').textContent = formatarMoeda(
+                dadosGlobais.flexivel.reduce((sum, cat) => sum + (cat.fixo * 12), 0)
+            );
+        }
+
+        // ORÇAMENTO CONTÍNUO
+        function gerarOrçamentoContínuo() {
+            const mesInicial = document.getElementById('mesInicial').value;
+            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const inicioIndex = meses.indexOf(mesInicial);
+            
+            const tbody = document.getElementById('contiguoTable');
+            tbody.innerHTML = '';
+            let acumulado = 0;
+            let totalContinuo = 0;
+
+            for (let i = 0; i < 12; i++) {
+                const mesIndex = (inicioIndex + i) % 12;
+                const mes = meses[mesIndex];
+                
+                const receita = dadosGlobais.volumeVendas * dadosGlobais.precoUnitario * (1 + (dadosGlobais.inflacao * i));
+                const custos = receita * 0.6;
+                const margem = ((receita - custos) / receita * 100).toFixed(1);
+                acumulado += (receita - custos);
+                totalContinuo += custos;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${mes}</td>
+                    <td class="currency">${formatarMoeda(receita)}</td>
+                    <td class="currency">${formatarMoeda(custos)}</td>
+                    <td class="currency">${margem}%</td>
+                    <td class="currency"><strong>${formatarMoeda(acumulado)}</strong></td>
+                `;
+                tbody.appendChild(row);
+            }
+
+            document.getElementById('comp_continuo').textContent = formatarMoeda(totalContinuo);
+        }
+
+        // CENÁRIOS
+        function calcularCenarios() {
+            const cenariosPar = {
+                pessimista: {
+                    vendas: parseFloat(document.getElementById('pessimista_vendas').value),
+                    custos: parseFloat(document.getElementById('pessimista_custos').value)
+                },
+                realista: {
+                    vendas: parseFloat(document.getElementById('realista_vendas').value),
+                    custos: parseFloat(document.getElementById('realista_custos').value)
+                },
+                otimista: {
+                    vendas: parseFloat(document.getElementById('otimista_vendas').value),
+                    custos: parseFloat(document.getElementById('otimista_custos').value)
+                }
+            };
+
+            const resultados = [];
+            const receitas = [];
+
+            Object.entries(cenariosPar).forEach(([nome, valores]) => {
+                const vendas = dadosGlobais.volumeVendas * (1 + valores.vendas / 100);
+                const receita = vendas * dadosGlobais.precoUnitario;
+                const custos = receita * 0.6 * (1 + valores.custos / 100);
+                const lucro = receita - custos;
+
+                receitas.push(lucro);
+                resultados.push({ nome, vendas, receita, custos, lucro });
+            });
+
+            const tbody = document.getElementById('cenarioResultados');
+            tbody.innerHTML = '';
+
+            resultados.forEach(r => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${r.nome.charAt(0).toUpperCase() + r.nome.slice(1)}</strong></td>
+                    <td class="currency">${formatarMoeda(r.receita)}</td>
+                    <td class="currency">${formatarMoeda(r.custos)}</td>
+                    <td class="currency" style="color: ${r.lucro >= 0 ? 'green' : 'red'};"><strong>${formatarMoeda(r.lucro)}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            const lucroMedio = (receitas[0] + receitas[1] + receitas[2]) / 3;
+            document.getElementById('comp_cenarios').textContent = formatarMoeda(lucroMedio * 12);
+
+            // Gráfico
+            const ctx = document.getElementById('scenarioChart').getContext('2d');
+            if (window.scenarioChartInstance) {
+                window.scenarioChartInstance.destroy();
+            }
+            window.scenarioChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pessimista', 'Realista', 'Otimista'],
+                    datasets: [{
+                        label: 'Lucro Líquido (R$)',
+                        data: receitas,
+                        backgroundColor: ['#f44336', '#4caf50', '#2196f3']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Inicializar
+        window.onload = () => {
+            atualizarSetor();
+        };
+    </script>
+</body>
+</html>
